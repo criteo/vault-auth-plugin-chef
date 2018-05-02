@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"encoding/json"
+	"time"
 )
 
 func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -68,7 +69,6 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	ttl, _, err := b.SanitizeTTLStr("72h", "144h")
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 				"host": conf.Host,
 			},
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       ttl,
+				TTL:       10 * time.Hour,
 				Renewable: true,
 			},
 		},
@@ -99,10 +99,5 @@ func (b *backend) pathAuthRenew(ctx context.Context, req *logical.Request, d *fr
 		return nil, errors.New("internal data does not match")
 	}
 
-	ttl, maxTTL, err := b.SanitizeTTLStr("72h", "144h")
-	if err != nil {
-		return nil, err
-	}
-
-	return framework.LeaseExtend(ttl, maxTTL, b.System())(ctx, req, d)
+	return framework.LeaseExtend(10 * time.Hour, 2 * 24 * time.Hour, b.System())(ctx, req, d)
 }
