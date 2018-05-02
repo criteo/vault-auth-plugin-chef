@@ -9,12 +9,16 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/helper/policyutil"
+	"time"
 )
 
 type role struct {
 	VaultPolicies   []string `json:"policies" structs:"policies" mapstructure:"policies"`
 	ChefPolicyNames []string `json:"policy_names" structs:"policy_names" mapstructure:"policy_names"`
 	ChefRoles       []string `json:"roles" structs:"roles" mapstructure:"roles"`
+	TTL				time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
+	MaxTTL 			time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	Period 			time.Duration `json:"period" structs:"period" mapstructure:"period"`
 }
 
 func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
@@ -86,6 +90,24 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		role.ChefRoles = d.Get("roles").([]string)
 	}
 
+	if ttl, ok := d.GetOk("ttl"); ok {
+		role.TTL = time.Duration(ttl.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		role.TTL = time.Duration(d.Get("ttl").(int)) * time.Second
+	}
+
+	if maxTTL, ok := d.GetOk("max_ttl"); ok {
+		role.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		role.MaxTTL = time.Duration(d.Get("max_ttl").(int)) * time.Second
+	}
+
+	if period, ok := d.GetOk("period"); ok {
+		role.Period = time.Duration(period.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		role.Period = time.Duration(d.Get("period").(int)) * time.Second
+	}
+
 	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(name), role)
 	if err != nil {
 		return nil, err
@@ -96,17 +118,13 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if err = req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
-	b.updateMap(*role)
+	b.updateMap(role)
 	for _, roleName := range role.ChefRoles {
-		for _, policy := range role.VaultPolicies {
-			b.rolesMap[roleName] = append(b.rolesMap[roleName], policy)
-		}
+			b.rolesMap[roleName] = append(b.rolesMap[roleName], role)
 	}
 
 	for _, policyName := range role.ChefPolicyNames {
-		for _, policy := range role.VaultPolicies {
-			b.policiesMap[policyName] = append(b.policiesMap[policyName], policy)
-		}
+			b.policiesMap[policyName] = append(b.policiesMap[policyName], role)
 	}
 	return nil, nil
 }
@@ -141,6 +159,9 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 			"policies":			role.VaultPolicies,
 			"policy_names":     role.ChefPolicyNames,
 			"roles":            role.ChefRoles,
+			"ttl":				role.TTL,
+			"max_ttl":			role.MaxTTL,
+			"period":			role.Period,
 		},
 	}
 

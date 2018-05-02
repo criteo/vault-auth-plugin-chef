@@ -55,17 +55,42 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 	nodeRolesName := node.AutomaticAttributes["roles"].([]interface{})
 
 	var policies []string
+	var TTL time.Duration = -1
+	var maxTTL time.Duration = -1
+	var period time.Duration = -1
 
 	b.RLock()
 	defer b.RUnlock()
 
-	for _, policy := range b.policiesMap[node.PolicyName] {
-		policies = append(policies, policy)
+	for _, role := range b.policiesMap[node.PolicyName] {
+		for _, policy := range role.VaultPolicies {
+			policies = append(policies, policy)
+		}
+		if TTL == -1 || role.TTL < TTL {
+			TTL = role.TTL
+		}
+		if maxTTL == -1 || role.MaxTTL < maxTTL {
+			maxTTL = role.MaxTTL
+		}
+		if period == -1 || role.Period < period {
+			period = role.Period
+		}
 	}
 
 	for _, roleName := range nodeRolesName {
-		for _, policy := range b.rolesMap[roleName.(string)] {
-			policies = append(policies, policy)
+		for _, role := range b.rolesMap[roleName.(string)] {
+			for _, policy := range role.VaultPolicies {
+				policies = append(policies, policy)
+			}
+			if TTL == -1 || role.TTL < TTL {
+				TTL = role.TTL
+			}
+			if maxTTL == -1 || role.MaxTTL < maxTTL {
+				maxTTL = role.MaxTTL
+			}
+			if period == -1 || role.Period < period {
+				period = role.Period
+			}
 		}
 	}
 
@@ -75,6 +100,11 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 
 	return &logical.Response{
 		Auth: &logical.Auth{
+			InternalData: map[string]interface{}{
+				"TTL": TTL,
+				"maxTTL": maxTTL,
+				"period": period,
+			},
 			Policies: policies,
 			Metadata: map[string]string{
 				"policies": node.PolicyName,
@@ -82,7 +112,8 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 				"host": conf.Host,
 			},
 			LeaseOptions: logical.LeaseOptions{
-				TTL:       10 * time.Hour,
+				TTL:		TTL,
+				MaxTTL:		maxTTL,
 				Renewable: true,
 			},
 		},
@@ -94,10 +125,13 @@ func (b *backend) pathAuthRenew(ctx context.Context, req *logical.Request, d *fr
 		return nil, errors.New("request auth was nil")
 	}
 
-	secretValue := req.Auth.InternalData["secret_value"].(string)
-	if secretValue != "abcd1234" {
-		return nil, errors.New("internal data does not match")
-	}
+	TTL := req.Auth.InternalData["TTL"].(time.Duration)
+	maxTTL := req.Auth.InternalData["maxTTL"].(time.Duration)
+	period := req.Auth.InternalData["period"].(time.Duration)
 
-	return framework.LeaseExtend(10 * time.Hour, 2 * 24 * time.Hour, b.System())(ctx, req, d)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.Period = period
+	resp.Auth.TTL = TTL
+	resp.Auth.MaxTTL = maxTTL
+	return resp, nil
 }

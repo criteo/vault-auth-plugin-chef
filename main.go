@@ -39,8 +39,8 @@ func Factory(ctx context.Context, c *logical.BackendConfig) (logical.Backend, er
 type backend struct {
 	*framework.Backend
 	sync.RWMutex
-	rolesMap map[string][]string
-	policiesMap map[string][]string
+	rolesMap map[string][]*role
+	policiesMap map[string][]*role
 }
 
 func Backend(_ *logical.BackendConfig) *backend {
@@ -105,6 +105,15 @@ func Backend(_ *logical.BackendConfig) *backend {
 					"roles": {
 						Type: framework.TypeStringSlice,
 					},
+					"ttl": {
+						Type: framework.TypeDurationSecond,
+					},
+					"max_ttl": {
+						Type: framework.TypeDurationSecond,
+					},
+					"period": {
+						Type: framework.TypeDurationSecond,
+					},
 				},
 				ExistenceCheck: b.pathRoleExistenceCheck,
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -116,7 +125,7 @@ func Backend(_ *logical.BackendConfig) *backend {
 			},
 		},
 	}
-	b.policiesMap = make(map[string][]string)
-	b.rolesMap = make(map[string][]string)
+	b.policiesMap = make(map[string][]*role)
+	b.rolesMap = make(map[string][]*role)
 	return &b
 }
