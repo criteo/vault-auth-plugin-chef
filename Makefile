@@ -22,16 +22,17 @@ NAME := $(notdir $(PROJECT))
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 VERSION := $(shell awk -F\" '/Version/ { print $$2; exit }' "${CURRENT_DIR}/version/version.go")
 EXTERNAL_TOOLS = \
-	github.com/golang/dep/cmd/dep
+	github.com/golang/dep/cmd/dep \
+	github.com/mitchellh/gox
 
 # Current system information
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
 # Default os-arch combination to build
-XC_OS ?= darwin freebsd linux netbsd openbsd solaris windows
+XC_OS ?= darwin freebsd linux netbsd openbsd solaris
 XC_ARCH ?= 386 amd64 arm
-XC_EXCLUDE ?= darwin/arm solaris/386 solaris/arm windows/arm
+XC_EXCLUDE ?= darwin/arm solaris/386 solaris/arm windows/arm openbsd/arm
 
 # GPG Signing key (blank by default, means no GPG signing)
 GPG_KEY ?=
@@ -55,22 +56,15 @@ define make-xc-target
 		@printf "%s%20s %s\n" "-->" "${1}/${2}:" "${PROJECT} (excluded)"
   else
 		@printf "%s%20s %s\n" "-->" "${1}/${2}:" "${PROJECT}"
-		@docker run \
-			--interactive \
-			--rm \
-			--dns="8.8.8.8" \
-			--volume="${CURRENT_DIR}:/go/src/${PROJECT}" \
-			--workdir="/go/src/${PROJECT}" \
-			"golang:${GOVERSION}" \
-			env \
-				CGO_ENABLED="0" \
-				GOOS="${1}" \
-				GOARCH="${2}" \
-				go build \
-				  -a \
-					-o="pkg/${1}_${2}/${NAME}${3}" \
-					-ldflags "${LD_FLAGS}" \
-					-tags "${GOTAGS}"
+		@env \
+			CGO_ENABLED="0" \
+			gox \
+			 -os "${1}" \
+			 -arch "${2}" \
+			 -output "pkg/{{.OS}}_{{.Arch}}/${NAME}" \
+			 -parallel=1 \
+			 -ldflags "${LD_FLAGS}" \
+			 -tags "${GOTAGS}"
   endif
   .PHONY: $1/$2
 
@@ -111,16 +105,9 @@ dev:
 
 # dist builds the binaries and then signs and packages them for distribution
 dist:
-ifndef GPG_KEY
-	@echo "==> ERROR: No GPG key specified! Without a GPG key, this release cannot"
-	@echo "           be signed. Set the environment variable GPG_KEY to the ID of"
-	@echo "           the GPG key to continue."
-	@exit 127
-else
 	@$(MAKE) -f "${MKFILE_PATH}" _cleanup
 	@$(MAKE) -f "${MKFILE_PATH}" -j4 build
-	@$(MAKE) -f "${MKFILE_PATH}" _compress _checksum _sign
-endif
+	@$(MAKE) -f "${MKFILE_PATH}" _compress _checksum 
 .PHONY: dist
 
 # test runs the test suite.
@@ -154,8 +141,8 @@ _compress:
 			ext=".exe"; \
 		fi; \
 		cd "$$platform"; \
-		tar -czf "${CURRENT_DIR}/pkg/dist/${NAME}_${VERSION}_$${osarch}.tgz" "${NAME}$${ext}"; \
-		zip -q "${CURRENT_DIR}/pkg/dist/${NAME}_${VERSION}_$${osarch}.zip" "${NAME}$${ext}"; \
+		tar -czf "${CURRENT_DIR}/pkg/dist/${NAME}-${VERSION}_$${osarch}.tar.gz" "${NAME}$${ext}"; \
+		zip -q "${CURRENT_DIR}/pkg/dist/${NAME}-${VERSION}_$${osarch}.zip" "${NAME}$${ext}"; \
 		cd - &>/dev/null; \
 	done
 .PHONY: _compress
@@ -166,30 +153,3 @@ _checksum:
 		shasum --algorithm 256 * > ${CURRENT_DIR}/pkg/dist/${NAME}_${VERSION}_SHA256SUMS && \
 		cd - &>/dev/null
 .PHONY: _checksum
-
-# _sign signs the binaries using the given GPG_KEY. This should not be called
-# as a separate function.
-_sign:
-	@echo "==> Signing ${PROJECT} at v${VERSION}"
-	@gpg \
-		--default-key "${GPG_KEY}" \
-		--detach-sig "${CURRENT_DIR}/pkg/dist/${NAME}_${VERSION}_SHA256SUMS"
-	@git commit \
-		--allow-empty \
-		--gpg-sign="${GPG_KEY}" \
-		--message "Release v${VERSION}" \
-		--quiet \
-		--signoff
-	@git tag \
-		--annotate \
-		--create-reflog \
-		--local-user "${GPG_KEY}" \
-		--message "Version ${VERSION}" \
-		--sign \
-		"v${VERSION}" master
-	@echo "--> Do not forget to run:"
-	@echo ""
-	@echo "    git push && git push --tags"
-	@echo ""
-	@echo "And then upload the binaries in dist/!"
-.PHONY: _sign
