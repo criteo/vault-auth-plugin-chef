@@ -1,0 +1,23 @@
+sudo: false
+language: go
+env: 
+go:
+- 1.x
+script:
+- make bootstrap
+- dep ensure
+- make test
+- make dev
+before_deploy:
+- make dist
+deplo:
+  provider: releases
+  file_glob: true
+  file:
+  - "*.tar.gz"
+  - "*.zip"
+  skip_cleanup: true
+  on:
+    tags: true
+  api_key:
+    secure: ql/pJsKPQT2ZaudmIrAKTNyyEOD/LoNvFQhN19372IKDki6k776SlYWPBzXbLvuFyG4wOLAwOZZLgLtKJHat3LbqiZesSD1ajyQTWxyXgffu70wZCWSBnvFqnONkcPs5RLPWfb1pJH/faHKSVFmWDsxb1m9ws7XXQwwPwgJYY95B/PjiMeIOckBdb3VUO/s7tZPCjQajzweXs+YKP3ZIP0Ct7EA1AcnCYawczn7xByg+B57tW2O2v1NxjXXAiQmEFU6GvRdq59szOq1XH/vbTSYu8Wc2KahFsDDr5xk544jiuj3PzODqNGSf3N9X/mbp1lZTWWs0bE9X+Rc1yXhAl1G9S4yImcaIH1cq1RE7NKIkcEmu6DyiksO00cFe+X4IqcsFRiTbFZ7lSX8v+8zTSM9L0f5jnL5/kZut0sF50j4wt3qj+gbV8Q+jFivzBzB2cE1n8OLo+tgfnuI2y474SnH+0H5Rp3SQvFdo/7g0xlrkjSsLE5IHNgH1X4qadK5txbOJbBL71hZB1MgFiUHlHFtEZuoz4BzojSd3daNijxKtZ3BHX9NH79VNs4b2/javXBcF54cg+F95yLkRsPp1g65iRCIi5CS6OfcyMzNnimWFtT6CaUONDOYP/A5qRnwJjWNSkVOC4ZSlP4DtyVY9QrGBQqucwoU5IhiuxfnLAPw=
