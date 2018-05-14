@@ -101,9 +101,9 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 	return &logical.Response{
 		Auth: &logical.Auth{
 			InternalData: map[string]interface{}{
-				"TTL": TTL,
-				"maxTTL": maxTTL,
-				"period": period,
+				"TTL": TTL.Seconds(),
+				"maxTTL": maxTTL.Seconds(),
+				"period": period.Seconds(),
 			},
 			Policies: policies,
 			Metadata: map[string]string{
@@ -125,9 +125,9 @@ func (b *backend) pathAuthRenew(ctx context.Context, req *logical.Request, d *fr
 		return nil, errors.New("request auth was nil")
 	}
 
-	TTL := req.Auth.InternalData["TTL"].(time.Duration)
-	maxTTL := req.Auth.InternalData["maxTTL"].(time.Duration)
-	period := req.Auth.InternalData["period"].(time.Duration)
+	TTL := time.Duration(req.Auth.InternalData["TTL"].(float64)) * time.Second
+	maxTTL := time.Duration(req.Auth.InternalData["maxTTL"].(float64)) * time.Second
+	period := time.Duration(req.Auth.InternalData["period"].(float64)) * time.Second
 
 	resp := &logical.Response{Auth: req.Auth}
 	resp.Auth.Period = period

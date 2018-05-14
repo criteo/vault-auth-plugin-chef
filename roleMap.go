@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"context"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -35,7 +34,6 @@ func (b *backend) updateMap(requestRole *role) {
 		}
 		b.policiesMap[policyName] = unique(b.policiesMap[policyName])
 	}
-	b.Logger().Info(spew.Sprint(b.rolesMap))
 }
 
 func (b *backend) deleteMap (ctx context.Context, req *logical.Request, roleName string) {
@@ -58,7 +56,6 @@ func (b *backend) deleteMap (ctx context.Context, req *logical.Request, roleName
 			b.policiesMap[policyName] = remove(role, b.policiesMap[policyName])
 		}
 	}
-	b.Logger().Info(spew.Sprint(b.rolesMap))
 }
 
 func contain(a *role, list []*role) bool {
