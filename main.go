@@ -51,7 +51,6 @@ func Backend(_ *logical.BackendConfig) *backend {
 		AuthRenew:   b.pathAuthRenew,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{"login"},
-			SealWrapStorage: []string{"config"},
 		},
 		Paths: []*framework.Path{
 
