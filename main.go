@@ -51,80 +51,94 @@ func Backend(_ *logical.BackendConfig) *backend {
 		AuthRenew:   b.pathAuthRenew,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{"login"},
+			SealWrapStorage: []string{"config"},
 		},
-		Paths: []*framework.Path{
-
-			{
-				Pattern: "login",
-				Fields: map[string]*framework.FieldSchema{
-					"node_name": {
-						Type: framework.TypeString,
-					},
-					"private_key": {
-						Type: framework.TypeString,
-					},
-				},
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.pathAuthLogin,
-				},
+		Paths: framework.PathAppend(
+			[]*framework.Path{
+				pathConfig(&b),
+				pathLogin(&b),
 			},
-
-			{
-				Pattern: "config",
-				Fields: map[string]*framework.FieldSchema{
-					"host": {
-						Type: framework.TypeString,
-					},
-				},
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.pathConfigWrite,
-					logical.CreateOperation: b.pathConfigWrite,
-					logical.ReadOperation:   b.pathConfigRead,
-				},
-			},
-
-			{
-				Pattern: "role/?",
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ListOperation: b.pathRoleList,
-				},
-			},
-			{
-				Pattern: "role/" + framework.GenericNameRegex("name"),
-				Fields: map[string]*framework.FieldSchema{
-					"name": {
-						Type: framework.TypeString,
-					},
-					"policies": {
-						Type: framework.TypeStringSlice,
-					},
-					"policy_names": {
-						Type: framework.TypeStringSlice,
-					},
-					"roles": {
-						Type: framework.TypeStringSlice,
-					},
-					"ttl": {
-						Type: framework.TypeDurationSecond,
-					},
-					"max_ttl": {
-						Type: framework.TypeDurationSecond,
-					},
-					"period": {
-						Type: framework.TypeDurationSecond,
-					},
-				},
-				ExistenceCheck: b.pathRoleExistenceCheck,
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.CreateOperation: b.pathRoleCreateUpdate,
-					logical.UpdateOperation: b.pathRoleCreateUpdate,
-					logical.ReadOperation:   b.pathRoleRead,
-					logical.DeleteOperation: b.pathRoleDelete,
-				},
-			},
-		},
-	}
+			pathsRole(&b),
+		),
+		}
 	b.policiesMap = make(map[string][]*role)
 	b.rolesMap = make(map[string][]*role)
 	return &b
+}
+
+func pathConfig(b *backend) *framework.Path {
+     return &framework.Path{
+	Pattern: "config$",
+	Fields: map[string]*framework.FieldSchema{
+		"host": {
+			Type: framework.TypeString,
+			Description: "Host must be a host string, a host:port pair, or a URL to the base of the Chef server.",
+		},
+	},
+	Callbacks: map[logical.Operation]framework.OperationFunc{
+		logical.UpdateOperation: b.pathConfigWrite,
+		logical.CreateOperation: b.pathConfigWrite,
+		logical.ReadOperation:   b.pathConfigRead,
+	},
+     }
+}
+func pathLogin(b *backend) *framework.Path {
+     return &framework.Path{
+	Pattern: "login",
+	Fields: map[string]*framework.FieldSchema{
+		"node_name": {
+			Type: framework.TypeString,
+		},
+		"private_key": {
+			Type: framework.TypeString,
+		},
+	},
+	Callbacks: map[logical.Operation]framework.OperationFunc{
+		logical.UpdateOperation: b.pathAuthLogin,
+	},
+    }
+}
+
+func pathsRole(b *backend) []*framework.Path {
+     return []*framework.Path{
+     	    &framework.Path{
+		Pattern: "role/?",
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathRoleList,
+		},
+     	    },
+	    &framework.Path{
+		Pattern: "role/" + framework.GenericNameRegex("name"),
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type: framework.TypeString,
+			},
+			"policies": {
+				Type: framework.TypeStringSlice,
+			},
+			"policy_names": {
+				Type: framework.TypeStringSlice,
+			},
+			"roles": {
+				Type: framework.TypeStringSlice,
+			},
+			"ttl": {
+				Type: framework.TypeDurationSecond,
+			},
+			"max_ttl": {
+				Type: framework.TypeDurationSecond,
+			},
+			"period": {
+				Type: framework.TypeDurationSecond,
+			},
+		},
+		ExistenceCheck: b.pathRoleExistenceCheck,
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.CreateOperation: b.pathRoleCreateUpdate,
+			logical.UpdateOperation: b.pathRoleCreateUpdate,
+			logical.ReadOperation:   b.pathRoleRead,
+			logical.DeleteOperation: b.pathRoleDelete,
+		},
+	  },
+     }
 }
