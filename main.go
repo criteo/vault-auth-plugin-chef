@@ -68,10 +68,11 @@ func Backend(_ *logical.BackendConfig) *backend {
 
 func pathConfig(b *backend) *framework.Path {
      return &framework.Path{
-	Pattern: "config",
+	Pattern: "config$",
 	Fields: map[string]*framework.FieldSchema{
 		"host": {
 			Type: framework.TypeString,
+			Description: "Host must be a host string, a host:port pair, or a URL to the base of the Chef server.",
 		},
 	},
 	Callbacks: map[logical.Operation]framework.OperationFunc{
