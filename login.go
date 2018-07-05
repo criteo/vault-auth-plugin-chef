@@ -23,7 +23,7 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse("no private key provided"), nil
 	}
 
-	raw, err := req.Storage.Get(ctx, "/config")
+	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}

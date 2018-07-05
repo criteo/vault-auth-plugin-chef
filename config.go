@@ -20,7 +20,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	config := &config{
 		Host:host,
 	}
-	entry, err := logical.StorageEntryJSON("/config", config)
+	entry, err := logical.StorageEntryJSON("config", config)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	raw, err := req.Storage.Get(ctx, "/config")
+	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}
