@@ -25,7 +25,7 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 
 	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse("Error while fetching host"), nil
 	}
 
 	if raw == nil {
