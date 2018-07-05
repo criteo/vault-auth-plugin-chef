@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"fmt"
 )
 
 type config struct {
@@ -20,9 +21,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	config := &config{
 		Host:host,
 	}
-	entry, err := logical.StorageEntryJSON("/config", config)
+	entry, err := logical.StorageEntryJSON("config", config)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(fmt.Sprintf("Error while storing config : %s", err)), err
 	}
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
@@ -31,9 +32,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	raw, err := req.Storage.Get(ctx, "/config")
+	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(fmt.Sprintf("Error while fetching config : %s", err)), err
 	}
 	if raw == nil {
 		return nil, nil
