@@ -88,9 +88,11 @@ func pathLogin(b *backend) *framework.Path {
 	Fields: map[string]*framework.FieldSchema{
 		"node_name": {
 			Type: framework.TypeString,
+			Description: "The node name, can be found at /etc/chef/client.rb.",
 		},
 		"private_key": {
 			Type: framework.TypeString,
+			Description: "The private key, can be found at /etc/chef/client.pem.",
 		},
 	},
 	Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -112,24 +114,34 @@ func pathsRole(b *backend) []*framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type: framework.TypeString,
+				Description: "Name of the role.",
 			},
 			"policies": {
 				Type: framework.TypeStringSlice,
+				Description: "Vault policies.",
 			},
 			"policy_names": {
 				Type: framework.TypeStringSlice,
+				Description: "Chef policies.",
 			},
 			"roles": {
 				Type: framework.TypeStringSlice,
+				Description: "Chef roles.",
 			},
 			"ttl": {
 				Type: framework.TypeDurationSecond,
+				Description: "Initial TTL to associate with the token. Token renewals may be able to extend beyond this value, " +
+					"depending on the configured maximumTTLs. This is specified as a numeric string with suffix like 30s or 5m",
 			},
 			"max_ttl": {
 				Type: framework.TypeDurationSecond,
+				Description: "maximum lifetime for the token. Unlike normal TTLs, the maximum TTL is a hard limit and cannot " +
+					"be exceeded. This is specified as a numeric string with suffix like 30s or 5m.",
 			},
 			"period": {
 				Type: framework.TypeDurationSecond,
+				Description: "If specified, every renewal will use the given period. Periodic tokens do not expire. " +
+					"This is specified as a numeric string with suffix like 30s or 5m.",
 			},
 		},
 		ExistenceCheck: b.pathRoleExistenceCheck,
