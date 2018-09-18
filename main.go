@@ -88,11 +88,11 @@ func pathLogin(b *backend) *framework.Path {
 	Fields: map[string]*framework.FieldSchema{
 		"node_name": {
 			Type: framework.TypeString,
-			Description: "The node name, can be found at /etc/chef/client.rb.",
+			Description: "The node name, can be often found at /etc/chef/client.rb.",
 		},
 		"private_key": {
 			Type: framework.TypeString,
-			Description: "The private key, can be found at /etc/chef/client.pem.",
+			Description: "The private key, can be often found at /etc/chef/client.pem.",
 		},
 	},
 	Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -118,15 +118,15 @@ func pathsRole(b *backend) []*framework.Path {
 			},
 			"policies": {
 				Type: framework.TypeStringSlice,
-				Description: "Vault policies.",
+				Description: "Vault policies that will be attached to the token.",
 			},
 			"policy_names": {
 				Type: framework.TypeStringSlice,
-				Description: "Chef policies.",
+				Description: "Chef policies that will match against the informations returned by the chef server.",
 			},
 			"roles": {
 				Type: framework.TypeStringSlice,
-				Description: "Chef roles.",
+				Description: "Chef roles that will match against the informations returned by the chef server.",
 			},
 			"ttl": {
 				Type: framework.TypeDurationSecond,
@@ -135,7 +135,7 @@ func pathsRole(b *backend) []*framework.Path {
 			},
 			"max_ttl": {
 				Type: framework.TypeDurationSecond,
-				Description: "maximum lifetime for the token. Unlike normal TTLs, the maximum TTL is a hard limit and cannot " +
+				Description: "Maximum lifetime for the token. Unlike normal TTLs, the maximum TTL is a hard limit and cannot " +
 					"be exceeded. This is specified as a numeric string with suffix like 30s or 5m.",
 			},
 			"period": {
