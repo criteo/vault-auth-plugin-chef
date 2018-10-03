@@ -120,6 +120,9 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if role.TTL == 0 && role.Period == 0 {
 		return nil, fmt.Errorf("You have to specify either period or ttl")
 	}
+	if role.TTL < 0 || role.MaxTTL < 0 || role.Period < 0 {
+		return nil, fmt.Errorf("You can't use negative values for ttl")
+	}
 
 	// Serializing json
 	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(name), role)
