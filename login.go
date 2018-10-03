@@ -1,15 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"errors"
 	"context"
+	"errors"
+	"fmt"
+
+	"encoding/json"
+	"time"
 
 	"github.com/go-chef/chef"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"encoding/json"
-	"time"
 )
 
 func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -23,12 +24,17 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse("no private key provided"), nil
 	}
 
+	b.RLock()
+	defer b.RUnlock()
+
 	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
+		b.Logger().Error("error occured while saving chef host config: %s", err)
 		return logical.ErrorResponse(fmt.Sprintf("Error while fetching config : %s", err)), err
 	}
 
 	if raw == nil {
+		b.Logger().Warn("clients should not use an unconfigured backend.")
 		return logical.ErrorResponse("no host configured"), nil
 	}
 
@@ -49,6 +55,7 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 
 	node, err := client.Nodes.Get(nodeName)
 	if err != nil {
+		b.Logger().Error("error occured while authentication chef host with %s: %s", conf.Host, err)
 		return nil, logical.ErrPermissionDenied
 	}
 
@@ -58,9 +65,6 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 	var TTL time.Duration = -1
 	var maxTTL time.Duration = -1
 	var period time.Duration = -1
-
-	b.RLock()
-	defer b.RUnlock()
 
 	for _, role := range b.policiesMap[node.PolicyName] {
 		for _, policy := range role.VaultPolicies {
@@ -101,19 +105,19 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 	return &logical.Response{
 		Auth: &logical.Auth{
 			InternalData: map[string]interface{}{
-				"TTL": TTL.Seconds(),
+				"TTL":    TTL.Seconds(),
 				"maxTTL": maxTTL.Seconds(),
 				"period": period.Seconds(),
 			},
 			Policies: policies,
 			Metadata: map[string]string{
 				"policies": node.PolicyName,
-				"roles": fmt.Sprint(nodeRolesName),
-				"host": conf.Host,
+				"roles":    fmt.Sprint(nodeRolesName),
+				"host":     conf.Host,
 			},
 			LeaseOptions: logical.LeaseOptions{
-				TTL:		TTL,
-				MaxTTL:		maxTTL,
+				TTL:       TTL,
+				MaxTTL:    maxTTL,
 				Renewable: true,
 			},
 		},

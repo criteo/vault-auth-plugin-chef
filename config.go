@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 
+	"fmt"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"fmt"
 )
 
 type config struct {
@@ -19,21 +20,30 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse("no host provided"), nil
 	}
 	config := &config{
-		Host:host,
+		Host: host,
 	}
 	entry, err := logical.StorageEntryJSON("config", config)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error while storing config : %s", err)), err
+		return logical.ErrorResponse(fmt.Sprintf("Error while creating config entry : %s", err)), err
 	}
+
+	b.Lock()
+	defer b.Unlock()
+
 	if err := req.Storage.Put(ctx, entry); err != nil {
+		b.Logger().Error("error occured while saving chef host config: %s", err)
 		return nil, err
 	}
 	return nil, nil
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.RLock()
+	defer b.RUnlock()
+
 	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
+		b.Logger().Error("error occured while fetching chef host config: %s", err)
 		return logical.ErrorResponse(fmt.Sprintf("Error while fetching config : %s", err)), err
 	}
 	if raw == nil {
@@ -47,11 +57,10 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 	} else {
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"host":    conf.Host,
+				"host": conf.Host,
 			},
 		}
 
 		return resp, nil
 	}
 }
-

@@ -1,15 +1,15 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
-	"encoding/json"
-	"context"
 
 	"github.com/hashicorp/vault/logical"
 )
 
-func (b *backend) updateMap(requestRole *role) {
+func (b *backend) updateMap(requestRole *Role) {
 	for roleName := range b.rolesMap {
 		b.rolesMap[roleName] = unique(b.rolesMap[roleName])
 		if contain(requestRole, b.rolesMap[roleName]) && !sContain(roleName, requestRole.ChefRoles) {
@@ -36,12 +36,12 @@ func (b *backend) updateMap(requestRole *role) {
 	}
 }
 
-func (b *backend) deleteMap (ctx context.Context, req *logical.Request, roleName string) {
+func (b *backend) deleteMap(ctx context.Context, req *logical.Request, roleName string) {
 	raw, err := req.Storage.Get(ctx, fmt.Sprintf("%s%s", "role/", strings.ToLower(roleName)))
 	if err != nil || raw == nil {
 		return
 	}
-	role := &role{}
+	role := &Role{}
 	err = json.Unmarshal(raw.Value, role)
 	if err != nil {
 		return
@@ -58,7 +58,7 @@ func (b *backend) deleteMap (ctx context.Context, req *logical.Request, roleName
 	}
 }
 
-func contain(a *role, list []*role) bool {
+func contain(a *Role, list []*Role) bool {
 	for _, b := range list {
 		if b == a {
 			return true
@@ -76,8 +76,7 @@ func sContain(a string, list []string) bool {
 	return false
 }
 
-
-func remove(a *role, list []*role) []*role {
+func remove(a *Role, list []*Role) []*Role {
 	for i, b := range list {
 		if b == a {
 			list = unique(list)
@@ -90,9 +89,9 @@ func remove(a *role, list []*role) []*role {
 	return list
 }
 
-func unique(intSlice []*role) []*role {
-	keys := make(map[*role]bool)
-	var list []*role
+func unique(intSlice []*Role) []*Role {
+	keys := make(map[*Role]bool)
+	var list []*Role
 	for _, entry := range intSlice {
 		if _, value := keys[entry]; !value {
 			keys[entry] = true
