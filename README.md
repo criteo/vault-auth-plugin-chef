@@ -1,6 +1,6 @@
-# Vault Authentication plufin for Chef
+# Vault Authentication plugin for Chef
 
-This repository contain the source code of the vault authentication plugin for chef.
+This repository contains the source code of the vault authentication plugin for chef.
 
 Build the project:
 
