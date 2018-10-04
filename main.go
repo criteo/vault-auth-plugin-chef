@@ -40,8 +40,6 @@ func Factory(ctx context.Context, c *logical.BackendConfig) (logical.Backend, er
 type backend struct {
 	*framework.Backend
 	sync.RWMutex
-	rolesMap    map[string][]*Role
-	policiesMap map[string][]*Role
 }
 
 // Backend is the factory for our backend
@@ -60,11 +58,10 @@ func Backend(_ *logical.BackendConfig) *backend {
 				pathConfig(&b),
 				pathLogin(&b),
 			},
-			pathsRole(&b),
+			pathRole(&b),
+			pathPolicy(&b),
 		),
 	}
-	b.policiesMap = make(map[string][]*Role)
-	b.rolesMap = make(map[string][]*Role)
 	return &b
 }
 
@@ -99,60 +96,6 @@ func pathLogin(b *backend) *framework.Path {
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathAuthLogin,
-		},
-	}
-}
-
-func pathsRole(b *backend) []*framework.Path {
-	return []*framework.Path{
-		&framework.Path{
-			Pattern: "role/?",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.pathRoleList,
-			},
-		},
-		&framework.Path{
-			Pattern: "role/" + framework.GenericNameRegex("name"),
-			Fields: map[string]*framework.FieldSchema{
-				"name": {
-					Type:        framework.TypeString,
-					Description: "Name of the role.",
-				},
-				"policies": {
-					Type:        framework.TypeStringSlice,
-					Description: "Vault policies that will be attached to the token.",
-				},
-				"policy_names": {
-					Type:        framework.TypeStringSlice,
-					Description: "Chef policies that will match against the informations returned by the chef server.",
-				},
-				"roles": {
-					Type:        framework.TypeStringSlice,
-					Description: "Chef roles that will match against the informations returned by the chef server.",
-				},
-				"ttl": {
-					Type: framework.TypeDurationSecond,
-					Description: "Initial TTL to associate with the token. Token renewals may be able to extend beyond this value, " +
-						"depending on the configured maximumTTLs. This is specified as a numeric string with suffix like 30s or 5m",
-				},
-				"max_ttl": {
-					Type: framework.TypeDurationSecond,
-					Description: "Maximum lifetime for the token. Unlike normal TTLs, the maximum TTL is a hard limit and cannot " +
-						"be exceeded. This is specified as a numeric string with suffix like 30s or 5m.",
-				},
-				"period": {
-					Type: framework.TypeDurationSecond,
-					Description: "If specified, every renewal will use the given period. Periodic tokens do not expire. " +
-						"This is specified as a numeric string with suffix like 30s or 5m.",
-				},
-			},
-			ExistenceCheck: b.pathRoleExistenceCheck,
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.CreateOperation: b.pathRoleCreateUpdate,
-				logical.UpdateOperation: b.pathRoleCreateUpdate,
-				logical.ReadOperation:   b.pathRoleRead,
-				logical.DeleteOperation: b.pathRoleDelete,
-			},
 		},
 	}
 }

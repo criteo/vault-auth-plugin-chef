@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-// ChefRole represent a chef Role that will be matched against the node-name runlist
-type ChefRole struct {
+// ChefPolicy represent a chef Policy that will be matched against the node-name runlist
+type ChefPolicy struct {
 	Name          string        `json:"name" structs:"name" mapstructure:"name"`
 	VaultPolicies []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	TTL           time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
@@ -20,13 +20,13 @@ type ChefRole struct {
 	Period        time.Duration `json:"period" structs:"period" mapstructure:"period"`
 }
 
-func pathRole(b *backend) []*framework.Path {
+func pathPolicy(b *backend) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "policy/",
 			Fields:  map[string]*framework.FieldSchema{},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.pathRoleList,
+				logical.ListOperation: b.pathPolicyList,
 			},
 			ExistenceCheck:  nil,
 			HelpSynopsis:    "List all policies configured",
@@ -57,11 +57,11 @@ func pathRole(b *backend) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathRoleRead,
-				logical.UpdateOperation: b.pathRoleUpdateOrCreate,
-				logical.DeleteOperation: b.pathRoleDelete,
+				logical.ReadOperation:   b.pathPolicyRead,
+				logical.UpdateOperation: b.pathPolicyUpdateOrCreate,
+				logical.DeleteOperation: b.pathPolicyDelete,
 			},
-			ExistenceCheck:  b.pathRoleExistenceCheck,
+			ExistenceCheck:  b.pathPolicyExistenceCheck,
 			HelpSynopsis:    "CRUD operations on a single policy",
 			HelpDescription: "Let you read, update, create or delete a single policy.",
 		},
@@ -69,50 +69,50 @@ func pathRole(b *backend) []*framework.Path {
 
 }
 
-func (b *backend) getRoleEntryFromStorage(ctx context.Context, r *logical.Request, name string) (*ChefRole, error) {
+func (b *backend) getPolicyEntryFromStorage(ctx context.Context, r *logical.Request, name string) (*ChefPolicy, error) {
 	if name == "" {
-		b.Logger().Warn("empty name passed in getRoleEntryFromStorage")
-		return nil, fmt.Errorf("role's <name> is empty")
+		b.Logger().Warn("empty name passed in getPolicyEntryFromStorage")
+		return nil, fmt.Errorf("policy's <name> is empty")
 	}
 
 	b.RLock()
 	defer b.RUnlock()
 
-	raw, err := r.Storage.Get(ctx, "role/"+strings.ToLower(name))
+	raw, err := r.Storage.Get(ctx, "policy/"+strings.ToLower(name))
 	if err != nil {
 		return nil, err
 	}
 	if raw == nil {
 		return nil, nil
 	}
-	role := &ChefRole{}
-	if err := json.Unmarshal(raw.Value, role); err != nil {
+	p := &ChefPolicy{}
+	if err := json.Unmarshal(raw.Value, p); err != nil {
 		return nil, err
 	}
-	return role, nil
+	return p, nil
 }
 
-func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+func (b *backend) pathPolicyExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
 
-	p, err := b.getRoleEntryFromStorage(ctx, req, name)
+	p, err := b.getPolicyEntryFromStorage(ctx, req, name)
 	return p != nil, err
 }
 
-func (b *backend) pathRoleUpdateOrCreate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyUpdateOrCreate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var err error
-	var p *ChefRole
+	var p *ChefPolicy
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 	if req.Operation == logical.UpdateOperation {
-		p, err = b.getRoleEntryFromStorage(ctx, req, name)
+		p, err = b.getPolicyEntryFromStorage(ctx, req, name)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		p = &ChefRole{
+		p = &ChefPolicy{
 			Name:          name,
 			VaultPolicies: []string{},
 			TTL:           0,
@@ -154,66 +154,66 @@ func (b *backend) pathRoleUpdateOrCreate(ctx context.Context, req *logical.Reque
 	b.Lock()
 	defer b.Unlock()
 
-	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(name), p)
+	entry, err := logical.StorageEntryJSON("policy/"+strings.ToLower(name), p)
 	if err != nil {
 		return nil, err
 	}
 	return nil, req.Storage.Put(ctx, entry)
 }
 
-func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	role, err := b.getRoleEntryFromStorage(ctx, req, name)
+	policy, err := b.getPolicyEntryFromStorage(ctx, req, name)
 	if err != nil {
 		return nil, err
-	} else if role == nil {
+	} else if policy == nil {
 		return nil, nil
 	}
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"policies": role.VaultPolicies,
-			"name":     role.Name,
-			"ttl":      role.TTL,
-			"max_ttl":  role.MaxTTL,
-			"period":   role.Period,
+			"policies": policy.VaultPolicies,
+			"name":     policy.Name,
+			"ttl":      policy.TTL,
+			"max_ttl":  policy.MaxTTL,
+			"period":   policy.Period,
 		},
 	}
 
 	return resp, nil
 }
 
-func (b *backend) getRoleList(ctx context.Context, req *logical.Request) ([]string, error) {
+func (b *backend) getPolicyList(ctx context.Context, req *logical.Request) ([]string, error) {
 	b.RLock()
 	b.RUnlock()
-	return req.Storage.List(ctx, "role/")
+	return req.Storage.List(ctx, "policy/")
 }
 
-func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.RLock()
 	defer b.RUnlock()
 
-	policies, err := req.Storage.List(ctx, "role/")
+	policies, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
 	return logical.ListResponse(policies), nil
 }
 
-func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
-		return logical.ErrorResponse("missing role name"), nil
+		return logical.ErrorResponse("missing policy name"), nil
 	}
 
 	b.Lock()
 	defer b.Unlock()
 
-	if err := req.Storage.Delete(ctx, "role/"+strings.ToLower(name)); err != nil {
+	if err := req.Storage.Delete(ctx, "policy/"+strings.ToLower(name)); err != nil {
 		return nil, err
 	}
 	return nil, nil

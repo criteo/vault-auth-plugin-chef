@@ -18,6 +18,7 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 	if nodeName == "" {
 		return logical.ErrorResponse("no node name provided"), nil
 	}
+	l := b.Logger().With("node_name", nodeName, "request", req.ID)
 
 	privateKey := d.Get("private_key").(string)
 	if privateKey == "" {
@@ -29,12 +30,12 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 
 	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
-		b.Logger().Error("error occured while saving chef host config: %s", err)
+		l.Error("error occured while saving chef host config: %s", err)
 		return logical.ErrorResponse(fmt.Sprintf("Error while fetching config : %s", err)), err
 	}
 
 	if raw == nil {
-		b.Logger().Warn("clients should not use an unconfigured backend.")
+		l.Warn("clients should not use an unconfigured backend.")
 		return logical.ErrorResponse("no host configured"), nil
 	}
 
@@ -55,72 +56,101 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 
 	node, err := client.Nodes.Get(nodeName)
 	if err != nil {
-		b.Logger().Error("error occured while authentication chef host with %s: %s", conf.Host, err)
+		l.Error("error occured while authentication chef host with %s: %s", conf.Host, err)
 		return nil, logical.ErrPermissionDenied
 	}
 
-	nodeRolesName := node.AutomaticAttributes["roles"].([]interface{})
-
 	var policies []string
-	var TTL time.Duration = -1
-	var maxTTL time.Duration = -1
-	var period time.Duration = -1
+	var TTL time.Duration
+	var maxTTL time.Duration
+	var period time.Duration
+	var auth *logical.Auth
 
-	for _, role := range b.policiesMap[node.PolicyName] {
-		for _, policy := range role.VaultPolicies {
-			policies = append(policies, policy)
-		}
-		if TTL == -1 || role.TTL < TTL {
-			TTL = role.TTL
-		}
-		if maxTTL == -1 || role.MaxTTL < maxTTL {
-			maxTTL = role.MaxTTL
-		}
-		if period == -1 || role.Period < period {
-			period = role.Period
-		}
-	}
-
-	for _, roleName := range nodeRolesName {
-		for _, role := range b.rolesMap[roleName.(string)] {
-			for _, policy := range role.VaultPolicies {
-				policies = append(policies, policy)
-			}
-			if TTL == -1 || role.TTL < TTL {
-				TTL = role.TTL
-			}
-			if maxTTL == -1 || role.MaxTTL < maxTTL {
-				maxTTL = role.MaxTTL
-			}
-			if period == -1 || role.Period < period {
-				period = role.Period
-			}
-		}
-	}
-
+	var chefPolicy *ChefPolicy
 	if err != nil {
+		l.Error("error while fetching chef policy list from storage", err)
 		return nil, err
 	}
+	if node.PolicyName != "" {
+		chefPolicies, err := b.getPolicyList(ctx, req)
+		l = l.With("policy", node.PolicyName)
+		for _, p := range chefPolicies {
+			if p == node.PolicyName {
+				chefPolicy, err = b.getPolicyEntryFromStorage(ctx, req, p)
+				if err != nil {
+					l.Error("error while fetching chef policy %s from storage", err)
+					return nil, err
+				}
+				if chefPolicy == nil {
+					l.Error("can't fetch a listed chef policy named %s in storage", p)
+					return nil, fmt.Errorf("cannot fetch chef policy %s from storage backend", p)
+				}
+				auth = &logical.Auth{
+					DisplayName:  nodeName,
+					LeaseOptions: logical.LeaseOptions{TTL: chefPolicy.TTL, MaxTTL: chefPolicy.MaxTTL, Renewable: true},
+					Period:       chefPolicy.Period,
+					Policies:     chefPolicy.VaultPolicies,
+					Metadata:     map[string]string{"policy": chefPolicy.Name},
+					GroupAliases: []*logical.Alias{
+						{
+							Name: "policy-" + chefPolicy.Name,
+						},
+					},
+				}
+			}
+		}
+	} else if nodeRolesNames := node.AutomaticAttributes["roles"].([]interface{}); nodeRolesNames != nil && len(nodeRolesNames) > 0 {
+		nodeRoles := make([]string, 0, len(nodeRolesNames))
+		chefRoles, err := b.getRoleList(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		for _, nRaw := range nodeRolesNames {
 
+			roleName, ok := nRaw.(string)
+			if !ok {
+				return nil, fmt.Errorf("Can't serialize role name %+v into a string", nRaw)
+			}
+			nodeRoles = append(nodeRoles, roleName)
+		}
+		for _, r := range nodeRoles {
+			for _, cr := range chefRoles {
+
+				if r == cr {
+					l = l.With("role", r)
+					chefRole, err := b.getRoleEntryFromStorage(ctx, req, r)
+					if err != nil {
+						l.Error("error while fetching chef role %s from storage", err)
+						return nil, err
+					}
+					if chefRole == nil {
+						l.Error("can't fetch a listed chef role named %s in storage", r)
+						return nil, fmt.Errorf("cannot fetch chef role %s from storage backend", r)
+					}
+					auth = &logical.Auth{
+						DisplayName:  nodeName,
+						LeaseOptions: logical.LeaseOptions{TTL: chefRole.TTL, MaxTTL: chefRole.MaxTTL, Renewable: true},
+						Period:       chefRole.Period,
+						Policies:     chefRole.VaultPolicies,
+						Metadata:     map[string]string{"role": chefRole.Name},
+						GroupAliases: []*logical.Alias{},
+					}
+					// n is usually between 1 or 5, it's ok to loop again
+					for _, r := range nodeRoles {
+						auth.GroupAliases = append(auth.GroupAliases, &logical.Alias{Name: "role" + r})
+					}
+					break
+				}
+			}
+
+		}
+
+	}
+	if auth == nil {
+		return logical.ErrorResponse("no match found. permission denied."), nil
+	}
 	return &logical.Response{
-		Auth: &logical.Auth{
-			InternalData: map[string]interface{}{
-				"TTL":    TTL.Seconds(),
-				"maxTTL": maxTTL.Seconds(),
-				"period": period.Seconds(),
-			},
-			Policies: policies,
-			Metadata: map[string]string{
-				"policies": node.PolicyName,
-				"roles":    fmt.Sprint(nodeRolesName),
-				"host":     conf.Host,
-			},
-			LeaseOptions: logical.LeaseOptions{
-				TTL:       TTL,
-				MaxTTL:    maxTTL,
-				Renewable: true,
-			},
-		},
+		Auth: auth,
 	}, nil
 }
 
