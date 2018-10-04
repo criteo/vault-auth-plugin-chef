@@ -13,6 +13,25 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func pathLogin(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "login",
+		Fields: map[string]*framework.FieldSchema{
+			"node_name": {
+				Type:        framework.TypeString,
+				Description: "The node name, can be often found at /etc/chef/client.rb.",
+			},
+			"private_key": {
+				Type:        framework.TypeString,
+				Description: "The private key, can be often found at /etc/chef/client.pem.",
+			},
+		},
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathAuthLogin,
+		},
+	}
+}
+
 func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	nodeName := d.Get("node_name").(string)
 	if nodeName == "" {
@@ -60,10 +79,6 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 		return nil, logical.ErrPermissionDenied
 	}
 
-	var policies []string
-	var TTL time.Duration
-	var maxTTL time.Duration
-	var period time.Duration
 	var auth *logical.Auth
 
 	var chefPolicy *ChefPolicy

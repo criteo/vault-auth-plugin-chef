@@ -14,6 +14,23 @@ type config struct {
 	Host string `json:"host"`
 }
 
+func pathConfig(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "config$",
+		Fields: map[string]*framework.FieldSchema{
+			"host": {
+				Type:        framework.TypeString,
+				Description: "Host must be a host string, a host:port pair, or a URL to the base of the Chef server.",
+			},
+		},
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathConfigWrite,
+			logical.CreateOperation: b.pathConfigWrite,
+			logical.ReadOperation:   b.pathConfigRead,
+		},
+	}
+}
+
 func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	host := d.Get("host").(string)
 	if host == "" {

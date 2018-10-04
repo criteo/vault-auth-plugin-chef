@@ -64,38 +64,3 @@ func Backend(_ *logical.BackendConfig) *backend {
 	}
 	return &b
 }
-
-func pathConfig(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "config$",
-		Fields: map[string]*framework.FieldSchema{
-			"host": {
-				Type:        framework.TypeString,
-				Description: "Host must be a host string, a host:port pair, or a URL to the base of the Chef server.",
-			},
-		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigWrite,
-			logical.CreateOperation: b.pathConfigWrite,
-			logical.ReadOperation:   b.pathConfigRead,
-		},
-	}
-}
-func pathLogin(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "login",
-		Fields: map[string]*framework.FieldSchema{
-			"node_name": {
-				Type:        framework.TypeString,
-				Description: "The node name, can be often found at /etc/chef/client.rb.",
-			},
-			"private_key": {
-				Type:        framework.TypeString,
-				Description: "The private key, can be often found at /etc/chef/client.pem.",
-			},
-		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathAuthLogin,
-		},
-	}
-}
