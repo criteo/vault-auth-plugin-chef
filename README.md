@@ -2,7 +2,7 @@
 
 ## At the moment the README is lacking important information and should not be considered complete
 
-This repository contain the source code of the vault authentication plugin for chef.
+This repository contains the source code of the vault authentication plugin for chef.
 
 Build the project:
 
