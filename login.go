@@ -94,7 +94,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 					DisplayName:  nodeName,
 					LeaseOptions: logical.LeaseOptions{TTL: chefPolicy.TTL, MaxTTL: chefPolicy.MaxTTL, Renewable: true},
 					Period:       chefPolicy.Period,
-					Policies:     chefPolicy.VaultPolicies,
+					Policies:     append(chefPolicy.VaultPolicies, "default"),
 					Metadata:     map[string]string{"policy": chefPolicy.Name, "node_name": nodeName},
 					GroupAliases: []*logical.Alias{
 						{
@@ -138,7 +138,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 						DisplayName:  nodeName,
 						LeaseOptions: logical.LeaseOptions{TTL: chefRole.TTL, MaxTTL: chefRole.MaxTTL, Renewable: true},
 						Period:       chefRole.Period,
-						Policies:     chefRole.VaultPolicies,
+						Policies:     append(chefRole.VaultPolicies, "default"),
 						Metadata:     map[string]string{"role": chefRole.Name, "node_name": nodeName},
 						GroupAliases: []*logical.Alias{},
 						InternalData: map[string]interface{}{"private_key": privateKey},
