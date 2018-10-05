@@ -58,6 +58,7 @@ func pathPolicy(b *backend) []*framework.Path {
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathPolicyRead,
+				logical.CreateOperation: b.pathPolicyUpdateOrCreate,
 				logical.UpdateOperation: b.pathPolicyUpdateOrCreate,
 				logical.DeleteOperation: b.pathPolicyDelete,
 			},
@@ -126,15 +127,15 @@ func (b *backend) pathPolicyUpdateOrCreate(ctx context.Context, req *logical.Req
 	}
 
 	if TTLRaw, ok := d.GetOk("ttl"); ok {
-		p.TTL = TTLRaw.(time.Duration)
+		p.TTL = time.Duration(TTLRaw.(int)) * time.Second
 	}
 
 	if maxTTLRaw, ok := d.GetOk("max_ttl"); ok {
-		p.MaxTTL = maxTTLRaw.(time.Duration)
+		p.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
 	}
 
 	if periodRaw, ok := d.GetOk("period"); ok {
-		p.Period = periodRaw.(time.Duration)
+		p.Period = time.Duration(periodRaw.(int)) * time.Second
 	}
 
 	if p.TTL == 0 && p.Period == 0 {

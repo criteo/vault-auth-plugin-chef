@@ -23,7 +23,7 @@ type ChefRole struct {
 func pathRole(b *backend) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "policy/",
+			Pattern: "role/",
 			Fields:  map[string]*framework.FieldSchema{},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
@@ -33,7 +33,7 @@ func pathRole(b *backend) []*framework.Path {
 			HelpDescription: "List all policies configured",
 		},
 		{
-			Pattern: "policy/" + framework.GenericNameRegex("name"),
+			Pattern: "role/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeNameString,
@@ -58,6 +58,7 @@ func pathRole(b *backend) []*framework.Path {
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathRoleRead,
+				logical.CreateOperation: b.pathRoleUpdateOrCreate,
 				logical.UpdateOperation: b.pathRoleUpdateOrCreate,
 				logical.DeleteOperation: b.pathRoleDelete,
 			},
@@ -101,18 +102,18 @@ func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Reque
 
 func (b *backend) pathRoleUpdateOrCreate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var err error
-	var p *ChefRole
+	var r *ChefRole
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
 	if req.Operation == logical.UpdateOperation {
-		p, err = b.getRoleEntryFromStorage(ctx, req, name)
+		r, err = b.getRoleEntryFromStorage(ctx, req, name)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		p = &ChefRole{
+		r = &ChefRole{
 			Name:          name,
 			VaultPolicies: []string{},
 			TTL:           0,
@@ -122,39 +123,39 @@ func (b *backend) pathRoleUpdateOrCreate(ctx context.Context, req *logical.Reque
 	}
 
 	if policiesRaw, ok := d.GetOk("policies"); ok {
-		p.VaultPolicies = policiesRaw.([]string)
+		r.VaultPolicies = policiesRaw.([]string)
 	}
 
 	if TTLRaw, ok := d.GetOk("ttl"); ok {
-		p.TTL = TTLRaw.(time.Duration)
+		r.TTL = time.Duration(TTLRaw.(int)) * time.Second
 	}
 
 	if maxTTLRaw, ok := d.GetOk("max_ttl"); ok {
-		p.MaxTTL = maxTTLRaw.(time.Duration)
+		r.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
 	}
 
 	if periodRaw, ok := d.GetOk("period"); ok {
-		p.Period = periodRaw.(time.Duration)
+		r.Period = time.Duration(periodRaw.(int)) * time.Second
 	}
 
-	if p.TTL == 0 && p.Period == 0 {
+	if r.TTL == 0 && r.Period == 0 {
 		return nil, fmt.Errorf("you must provide either period or ttl")
 	}
 
-	if p.Period != 0 {
-		p.MaxTTL = 0
-		p.TTL = 0
-	} else if p.MaxTTL < p.TTL {
-		if p.MaxTTL != 0 {
+	if r.Period != 0 {
+		r.MaxTTL = 0
+		r.TTL = 0
+	} else if r.MaxTTL < r.TTL {
+		if r.MaxTTL != 0 {
 			return nil, fmt.Errorf("max_ttl should always be left zero or be higher than ttl")
 		}
-		p.MaxTTL = p.TTL
+		r.MaxTTL = r.TTL
 	}
 
 	b.Lock()
 	defer b.Unlock()
 
-	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(name), p)
+	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(name), r)
 	if err != nil {
 		return nil, err
 	}
