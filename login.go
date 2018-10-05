@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"encoding/json"
-	"time"
 
 	"github.com/go-chef/chef"
 	"github.com/hashicorp/vault/logical"
@@ -32,17 +31,8 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	nodeName := d.Get("node_name").(string)
-	if nodeName == "" {
-		return logical.ErrorResponse("no node name provided"), nil
-	}
+func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, privateKey string) (*logical.Response, error) {
 	l := b.Logger().With("node_name", nodeName, "request", req.ID)
-
-	privateKey := d.Get("private_key").(string)
-	if privateKey == "" {
-		return logical.ErrorResponse("no private key provided"), nil
-	}
 
 	b.RLock()
 	defer b.RUnlock()
@@ -105,13 +95,15 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 					LeaseOptions: logical.LeaseOptions{TTL: chefPolicy.TTL, MaxTTL: chefPolicy.MaxTTL, Renewable: true},
 					Period:       chefPolicy.Period,
 					Policies:     chefPolicy.VaultPolicies,
-					Metadata:     map[string]string{"policy": chefPolicy.Name},
+					Metadata:     map[string]string{"policy": chefPolicy.Name, "node_name": nodeName},
 					GroupAliases: []*logical.Alias{
 						{
 							Name: "policy-" + chefPolicy.Name,
 						},
 					},
+					InternalData: map[string]interface{}{"private_key": privateKey},
 				}
+				return &logical.Response{Auth: auth}, nil
 			}
 		}
 	} else if nodeRolesNames := node.AutomaticAttributes["roles"].([]interface{}); nodeRolesNames != nil && len(nodeRolesNames) > 0 {
@@ -147,26 +139,36 @@ func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *fr
 						LeaseOptions: logical.LeaseOptions{TTL: chefRole.TTL, MaxTTL: chefRole.MaxTTL, Renewable: true},
 						Period:       chefRole.Period,
 						Policies:     chefRole.VaultPolicies,
-						Metadata:     map[string]string{"role": chefRole.Name},
+						Metadata:     map[string]string{"role": chefRole.Name, "node_name": nodeName},
 						GroupAliases: []*logical.Alias{},
+						InternalData: map[string]interface{}{"private_key": privateKey},
 					}
 					// n is usually between 1 or 5, it's ok to loop again
 					for _, r := range nodeRoles {
 						auth.GroupAliases = append(auth.GroupAliases, &logical.Alias{Name: "role" + r})
 					}
-					break
+					return &logical.Response{Auth: auth}, nil
 				}
 			}
 
 		}
 
 	}
-	if auth == nil {
-		return logical.ErrorResponse("no match found. permission denied."), nil
+	return logical.ErrorResponse("no match found. permission denied."), nil
+}
+
+func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nodeName := d.Get("node_name").(string)
+	if nodeName == "" {
+		return logical.ErrorResponse("no node name provided"), nil
 	}
-	return &logical.Response{
-		Auth: auth,
-	}, nil
+
+	privateKey := d.Get("private_key").(string)
+	if privateKey == "" {
+		return logical.ErrorResponse("no private key provided"), nil
+	}
+
+	return b.Login(ctx, req, nodeName, privateKey)
 }
 
 func (b *backend) pathAuthRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -174,13 +176,21 @@ func (b *backend) pathAuthRenew(ctx context.Context, req *logical.Request, d *fr
 		return nil, errors.New("request auth was nil")
 	}
 
-	TTL := time.Duration(req.Auth.InternalData["TTL"].(float64)) * time.Second
-	maxTTL := time.Duration(req.Auth.InternalData["maxTTL"].(float64)) * time.Second
-	period := time.Duration(req.Auth.InternalData["period"].(float64)) * time.Second
+	b.Logger().Debug("received a renew request for %s", req.Auth.DisplayName)
 
-	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.Period = period
-	resp.Auth.TTL = TTL
-	resp.Auth.MaxTTL = maxTTL
-	return resp, nil
+	nodeName := req.Auth.Metadata["node_name"]
+	if nodeName == "" {
+		return logical.ErrorResponse("no node name provided"), nil
+	}
+
+	privateKeyRaw, ok := req.Auth.InternalData["private_key"]
+	var privateKey string
+	if ok {
+		privateKey = privateKeyRaw.(string)
+	}
+	if privateKey == "" {
+		return logical.ErrorResponse("no private key found"), nil
+	}
+
+	return b.Login(ctx, req, nodeName, privateKey)
 }
