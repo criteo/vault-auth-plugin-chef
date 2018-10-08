@@ -30,9 +30,9 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
 # Default os-arch combination to build
-XC_OS ?= darwin freebsd linux netbsd openbsd solaris
+XC_OS ?= darwin linux
 XC_ARCH ?= 386 amd64 arm
-XC_EXCLUDE ?= darwin/arm solaris/386 solaris/arm windows/arm openbsd/arm
+XC_EXCLUDE ?= darwin/arm 
 
 # GPG Signing key (blank by default, means no GPG signing)
 GPG_KEY ?=
@@ -55,7 +55,6 @@ define make-xc-target
   ifneq (,$(findstring ${1}/${2},$(XC_EXCLUDE)))
 		@printf "%s%20s %s\n" "-->" "${1}/${2}:" "${PROJECT} (excluded)"
   else
-		@printf "%s%20s %s\n" "-->" "${1}/${2}:" "${PROJECT}"
 		@env \
 			CGO_ENABLED="0" \
 			gox \
@@ -107,7 +106,7 @@ dev:
 dist:
 	@$(MAKE) -f "${MKFILE_PATH}" _cleanup
 	@$(MAKE) -f "${MKFILE_PATH}" -j4 build
-	@$(MAKE) -f "${MKFILE_PATH}" _compress _checksum 
+	@$(MAKE) -f "${MKFILE_PATH}" _compress _checksum
 .PHONY: dist
 
 # test runs the test suite.
@@ -130,7 +129,7 @@ _cleanup:
 # _compress compresses all the binaries in pkg/* as tarball and zip.
 _compress:
 	@mkdir -p "${CURRENT_DIR}/pkg/dist"
-	@for platform in $$(find ./pkg -mindepth 1 -maxdepth 1 -type d); do \
+	@for platform in $$(find ./pkg -mindepth 1 -maxdepth 2 -type d); do \
 		osarch=$$(basename "$$platform"); \
 		if [ "$$osarch" = "dist" ]; then \
 			continue; \
@@ -140,10 +139,11 @@ _compress:
 		if test -z "$${osarch##*windows*}"; then \
 			ext=".exe"; \
 		fi; \
-		cd "$$platform"; \
+		stat "$${platform}"; \
+		cd "$${platform}"; \
 		tar -czf "${CURRENT_DIR}/pkg/dist/${NAME}-${VERSION}_$${osarch}.tar.gz" "${NAME}$${ext}"; \
 		zip -q "${CURRENT_DIR}/pkg/dist/${NAME}-${VERSION}_$${osarch}.zip" "${NAME}$${ext}"; \
-		cd - &>/dev/null; \
+		cd "${CURRENT_DIR}"; \
 	done
 .PHONY: _compress
 

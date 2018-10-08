@@ -9,6 +9,7 @@ script:
 - make test
 - make dev
 before_deploy:
+- rm -rf pkg/
 - make dist
 deploy:
   provider: releases
