@@ -179,9 +179,9 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		Data: map[string]interface{}{
 			"policies": policy.VaultPolicies,
 			"name":     policy.Name,
-			"ttl":      policy.TTL,
-			"max_ttl":  policy.MaxTTL,
-			"period":   policy.Period,
+			"ttl":      policy.TTL.Seconds(),
+			"max_ttl":  policy.MaxTTL.Seconds(),
+			"period":   policy.Period.Seconds(),
 		},
 	}
 

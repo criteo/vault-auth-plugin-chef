@@ -179,9 +179,9 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 		Data: map[string]interface{}{
 			"policies": role.VaultPolicies,
 			"name":     role.Name,
-			"ttl":      role.TTL,
-			"max_ttl":  role.MaxTTL,
-			"period":   role.Period,
+			"ttl":      role.TTL.Seconds(),
+			"max_ttl":  role.MaxTTL.Seconds(),
+			"period":   role.Period.Seconds(),
 		},
 	}
 
