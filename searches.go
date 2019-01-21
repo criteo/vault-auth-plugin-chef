@@ -194,8 +194,8 @@ func (b *backend) pathSearchRead(ctx context.Context, req *logical.Request, d *f
 		Data: map[string]interface{}{
 			"policies":          search.Policies,
 			"name":              search.Name,
-			"search":            search.Search,
-			"allowed_staleness": search.AllowedStaleness,
+			"search_query":      search.Search,
+			"allowed_staleness": search.AllowedStaleness.Seconds(),
 		},
 	}
 
