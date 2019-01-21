@@ -2,49 +2,65 @@
 
 ## At the moment the README is lacking important information and should not be considered complete
 
-This repository contains the source code of the vault authentication plugin for chef.
+# Supported sources:
+    * Chef policy
+    * Roles
+    * SolR searches with cache
+## Quick-start
 
-Build the project:
+### Setup
+```
+export TMPDIR=$(mktemp -d)
+```
 
-~~~
-go build
-~~~
+### Build the binary
 
-Copy the plugin into the vault plugin directory:
+```
+go build -o $TMPDIR/plugin
+```
 
-~~~
-cp vault-auth-plugin-chef /opt/vault/plugin_directory
-~~~
+### Starting Vault with plugins
 
-Add the plug-in to the vault server
-~~~
-export VAULT_ADDR="http://127.0.0.1:8200"
+Here's a simple line you can use to start a dev instance with plugins already catalogued
+```
+vault server -dev -dev-plugin-dir=$(realpath $TMPDIR) -dev-plugin-init -dev-root-token-id=devtoken -log-level=trace
+```
 
-export SHA256=$(shasum -a 256 "/opt/vault/plugin_directory/vault-auth-plugin-chef" | cut -d' ' -f1)
-
-vault write sys/plugins/catalog/vault-auth-plugin-chef sha_256="${SHA256}" command="vault-auth-plugin-chef"
-
-vault auth-enable -path="chef" -plugin-name="vault-auth-plugin-chef" plugin
-~~~
-
-Configure the chef server
-~~~
-vault write auth/chef/config host="http://chef-server.com"
+Otherwise, use the regular way to catalog them
 ~~~
 
-Configure a role
-~~~
-vault write auth/chef/role/default policies="default" policy_names="chef_policy" roles="chef_role" ttl=259200 max_ttl=777600 period=2592000
+export SHA256=$(shasum -a 256 "$TMPDIR/plugin" | cut -d' ' -f1)
+vault write sys/plugins/catalog/vault-auth-plugin-chef sha_256="${SHA256}" command="plugin"
+
+vault auth enable -path="chef" -plugin-name="vault-auth-plugin-chef" plugin
 ~~~
 
-How to login using the plugin
+### Configuration
+#### Top level
+~~~
+vault write auth/chef/config host="http://chef-server.example.com"
+~~~
+
+#### Configure a policy
+```
+vault write auth/chef/policy/my-policy policies="default" period=86400
+```
+
+#### OPT: Add a search mapping
+```
+# Allowed staleness is an optionnal caching mechanism for big chef deployments
+
+vault write auth/chef/search/recipes policies=openssh-secret search_query="recipes:openssh*" allowed_staleness=60
+```
+
+### Login !
 ~~~
 vault write auth/chef/login node_name="node_name" private_key="private_key"
 ~~~
-
 
 References:
 
 * https://github.com/hashicorp/vault-auth-plugin-example
 * https://www.hashicorp.com/blog/building-a-vault-secure-plugin
 * https://www.vaultproject.io/docs/internals/plugins.html
+
