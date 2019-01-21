@@ -40,12 +40,14 @@ func Factory(ctx context.Context, c *logical.BackendConfig) (logical.Backend, er
 type backend struct {
 	*framework.Backend
 	sync.RWMutex
+	SearchStore *sync.Map
 }
 
 // Backend is the factory for our backend
 func Backend(_ *logical.BackendConfig) *backend {
 	var b backend
 
+	b.SearchStore = &sync.Map{}
 	b.Backend = &framework.Backend{
 		BackendType: logical.TypeCredential,
 		AuthRenew:   b.pathAuthRenew,
@@ -60,6 +62,7 @@ func Backend(_ *logical.BackendConfig) *backend {
 			},
 			pathRole(&b),
 			pathPolicy(&b),
+			pathSearch(&b),
 		),
 	}
 	return &b

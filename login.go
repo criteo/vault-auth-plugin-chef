@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"encoding/json"
 
@@ -39,7 +40,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 
 	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
-		l.Error("error occured while saving chef host config: %s", err)
+		l.Error("error occured while get chef host config: %s", err)
 		return logical.ErrorResponse(fmt.Sprintf("Error while fetching config : %s", err)), err
 	}
 
@@ -103,7 +104,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 					},
 					InternalData: map[string]interface{}{"private_key": privateKey},
 				}
-				return &logical.Response{Auth: auth}, nil
+				break
 			}
 		}
 	} else if nodeRolesNames := node.AutomaticAttributes["roles"].([]interface{}); nodeRolesNames != nil && len(nodeRolesNames) > 0 {
@@ -120,41 +121,61 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 			}
 			nodeRoles = append(nodeRoles, roleName)
 		}
-		for _, r := range nodeRoles {
-			for _, cr := range chefRoles {
+		auth, err = func() (*logical.Auth, error) {
+			for _, r := range nodeRoles {
+				for _, cr := range chefRoles {
 
-				if r == cr {
-					l = l.With("role", r)
-					chefRole, err := b.getRoleEntryFromStorage(ctx, req, r)
-					if err != nil {
-						l.Error("error while fetching chef role %s from storage", err)
-						return nil, err
+					if r == cr {
+						l = l.With("role", r)
+						chefRole, err := b.getRoleEntryFromStorage(ctx, req, r)
+						if err != nil {
+							l.Error("error while fetching chef role %s from storage", err)
+							return nil, err
+						}
+						if chefRole == nil {
+							l.Error("can't fetch a listed chef role named %s in storage", r)
+							return nil, fmt.Errorf("cannot fetch chef role %s from storage backend", r)
+						}
+						auth := &logical.Auth{
+							DisplayName:  nodeName,
+							LeaseOptions: logical.LeaseOptions{TTL: chefRole.TTL, MaxTTL: chefRole.MaxTTL, Renewable: true},
+							Period:       chefRole.Period,
+							Policies:     append(chefRole.VaultPolicies, "default"),
+							Metadata:     map[string]string{"role": chefRole.Name, "node_name": nodeName},
+							GroupAliases: []*logical.Alias{},
+							InternalData: map[string]interface{}{"private_key": privateKey},
+						}
+						// n is usually between 1 or 5, it's ok to loop again
+						for _, r := range nodeRoles {
+							auth.GroupAliases = append(auth.GroupAliases, &logical.Alias{Name: "role" + r})
+						}
+						return auth, nil
 					}
-					if chefRole == nil {
-						l.Error("can't fetch a listed chef role named %s in storage", r)
-						return nil, fmt.Errorf("cannot fetch chef role %s from storage backend", r)
-					}
-					auth = &logical.Auth{
-						DisplayName:  nodeName,
-						LeaseOptions: logical.LeaseOptions{TTL: chefRole.TTL, MaxTTL: chefRole.MaxTTL, Renewable: true},
-						Period:       chefRole.Period,
-						Policies:     append(chefRole.VaultPolicies, "default"),
-						Metadata:     map[string]string{"role": chefRole.Name, "node_name": nodeName},
-						GroupAliases: []*logical.Alias{},
-						InternalData: map[string]interface{}{"private_key": privateKey},
-					}
-					// n is usually between 1 or 5, it's ok to loop again
-					for _, r := range nodeRoles {
-						auth.GroupAliases = append(auth.GroupAliases, &logical.Alias{Name: "role" + r})
-					}
-					return &logical.Response{Auth: auth}, nil
 				}
 			}
-
+			return nil, nil
+		}()
+		if err != nil {
+			return nil, err
 		}
-
 	}
-	return logical.ErrorResponse("no match found. permission denied."), nil
+
+	if auth == nil {
+		return logical.ErrorResponse("no match found. permission denied."), nil
+	}
+
+	policies, searches, err := b.MatchingSearches(req, client)
+	if err != nil {
+		l.Error(fmt.Sprintf("error while fetching matched searches: %s"))
+		return nil, err
+	}
+	if len(searches) > 0 {
+		auth.Metadata["chef-matched-searches"] = strings.Join(searches, ",")
+	}
+	if len(policies) > 0 {
+		auth.Policies = append(auth.Policies, policies...)
+	}
+	return &logical.Response{Auth: auth}, nil
 }
 
 func (b *backend) pathAuthLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
