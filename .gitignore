@@ -23,6 +23,7 @@ vendor/
 .idea/**/tasks.xml
 .idea/**/dictionaries
 .idea/**/shelf
+null/
 
 # Compiled binaries
 /bin/
@@ -30,3 +31,9 @@ vendor/
 
 # Local development tmp
 /tmp/
+
+# Private test script
+/scripts/test-private.sh
+
+# Project binary
+/vault-auth-plugin-chef
