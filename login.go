@@ -166,7 +166,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 
 	policies, searches, err := b.MatchingSearches(req, client)
 	if err != nil {
-		l.Error(fmt.Sprintf("error while fetching matched searches: %s"))
+		l.Error(fmt.Sprintf("error while fetching matched searches: %s", err))
 		return nil, err
 	}
 	if len(searches) > 0 {
