@@ -11,7 +11,8 @@ import (
 )
 
 type config struct {
-	Host string `json:"host"`
+	Host            string   `json:"host"`
+	DefaultPolicies []string `json:"default_policies"`
 }
 
 func pathConfig(b *backend) *framework.Path {
@@ -21,6 +22,10 @@ func pathConfig(b *backend) *framework.Path {
 			"host": {
 				Type:        framework.TypeString,
 				Description: "Host must be a host string, a host:port pair, or a URL to the base of the Chef server.",
+			},
+			"default_policies": {
+				Type:        framework.TypeStringSlice,
+				Description: "The default list of policies assigned to every maching policy/role.",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -32,12 +37,14 @@ func pathConfig(b *backend) *framework.Path {
 }
 
 func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	policies := d.Get("default_policies").([]string)
 	host := d.Get("host").(string)
 	if host == "" {
 		return logical.ErrorResponse("no host provided"), nil
 	}
 	config := &config{
-		Host: host,
+		Host:            host,
+		DefaultPolicies: policies,
 	}
 	entry, err := logical.StorageEntryJSON("config", config)
 	if err != nil {

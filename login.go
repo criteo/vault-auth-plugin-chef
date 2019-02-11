@@ -164,6 +164,10 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 		return logical.ErrorResponse("no match found. permission denied."), nil
 	}
 
+	if len(conf.DefaultPolicies) > 0 {
+		auth.Policies = append(auth.Policies, conf.DefaultPolicies...)
+	}
+
 	policies, searches, err := b.MatchingSearches(req, client)
 	if err != nil {
 		l.Error(fmt.Sprintf("error while fetching matched searches: %s", err))
