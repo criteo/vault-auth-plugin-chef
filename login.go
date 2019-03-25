@@ -13,10 +13,8 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathLogin(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "login",
-		Fields: map[string]*framework.FieldSchema{
+func pathLogin(b *backend) []*framework.Path {
+	fields := map[string]*framework.FieldSchema{
 			"node_name": {
 				Type:        framework.TypeString,
 				Description: "The node name, can be often found at /etc/chef/client.rb.",
@@ -25,11 +23,21 @@ func pathLogin(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "The private key, can be often found at /etc/chef/client.pem.",
 			},
-		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
+		}
+	callbks := map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathAuthLogin,
-		},
-	}
+		}
+	return []*framework.Path{{
+		Pattern: "login",
+		Fields: fields,
+		Callbacks: callbks,
+	},
+	{
+		Pattern: "login/" + framework.GenericNameRegex("node_name"),
+		Fields:fields,
+		Callbacks:callbks,
+	},
+}
 }
 
 func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, privateKey string) (*logical.Response, error) {

@@ -52,14 +52,14 @@ func Backend(_ *logical.BackendConfig) *backend {
 		BackendType: logical.TypeCredential,
 		AuthRenew:   b.pathAuthRenew,
 		PathsSpecial: &logical.Paths{
-			Unauthenticated: []string{"login"},
+			Unauthenticated: []string{"login*"},
 			SealWrapStorage: []string{"config"},
 		},
 		Paths: framework.PathAppend(
 			[]*framework.Path{
 				pathConfig(&b),
-				pathLogin(&b),
 			},
+			pathLogin(&b),
 			pathRole(&b),
 			pathPolicy(&b),
 			pathSearch(&b),
