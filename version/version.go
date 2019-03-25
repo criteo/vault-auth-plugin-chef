@@ -2,7 +2,7 @@ package version
 
 import "fmt"
 
-const Version = "0.3.2"
+const Version = "0.3.3"
 
 var (
 	Name      string
