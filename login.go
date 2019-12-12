@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"encoding/json"
 
@@ -15,29 +16,29 @@ import (
 
 func pathLogin(b *backend) []*framework.Path {
 	fields := map[string]*framework.FieldSchema{
-			"node_name": {
-				Type:        framework.TypeString,
-				Description: "The node name, can be often found at /etc/chef/client.rb.",
-			},
-			"private_key": {
-				Type:        framework.TypeString,
-				Description: "The private key, can be often found at /etc/chef/client.pem.",
-			},
-		}
+		"node_name": {
+			Type:        framework.TypeString,
+			Description: "The node name, can be often found at /etc/chef/client.rb.",
+		},
+		"private_key": {
+			Type:        framework.TypeString,
+			Description: "The private key, can be often found at /etc/chef/client.pem.",
+		},
+	}
 	callbks := map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathAuthLogin,
-		}
+		logical.UpdateOperation: b.pathAuthLogin,
+	}
 	return []*framework.Path{{
-		Pattern: "login",
-		Fields: fields,
+		Pattern:   "login",
+		Fields:    fields,
 		Callbacks: callbks,
 	},
-	{
-		Pattern: "login/" + framework.GenericNameRegex("node_name"),
-		Fields:fields,
-		Callbacks:callbks,
-	},
-}
+		{
+			Pattern:   "login/" + framework.GenericNameRegex("node_name"),
+			Fields:    fields,
+			Callbacks: callbks,
+		},
+	}
 }
 
 func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, privateKey string) (*logical.Response, error) {
@@ -67,6 +68,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 		Key:     privateKey,
 		BaseURL: conf.Host,
 		SkipSSL: true,
+		Timeout: time.Second * 10,
 	})
 	if err != nil {
 		return nil, err
