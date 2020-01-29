@@ -170,8 +170,17 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 		}
 	}
 
+	// default login
 	if auth == nil {
-		return logical.ErrorResponse("no match found. permission denied."), nil
+		auth = &logical.Auth{
+			DisplayName:  nodeName,
+			LeaseOptions: logical.LeaseOptions{TTL: conf.DefaultTTL, MaxTTL: conf.DefaultMaxTTL, Renewable: true},
+			Period:       conf.DefaultPeriod,
+			Policies:     []string{"default"},
+			Metadata:     map[string]string{"node_name": nodeName},
+			GroupAliases: []*logical.Alias{},
+			InternalData: map[string]interface{}{"private_key": privateKey},
+		}
 	}
 
 	if len(conf.DefaultPolicies) > 0 {

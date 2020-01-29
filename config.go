@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"fmt"
 
@@ -11,8 +12,11 @@ import (
 )
 
 type config struct {
-	Host            string   `json:"host"`
-	DefaultPolicies []string `json:"default_policies"`
+	Host            string        `json:"host"`
+	DefaultPolicies []string      `json:"default_policies"`
+	DefaultTTL      time.Duration `json:"default_ttl" structs:"default_ttl" mapstructure:"default_ttl"`
+	DefaultMaxTTL   time.Duration `json:"default_max_ttl" structs:"default_max_ttl" mapstructure:"default_max_ttl"`
+	DefaultPeriod   time.Duration `json:"default_period" structs:"default_period" mapstructure:"default_period"`
 }
 
 func pathConfig(b *backend) *framework.Path {
