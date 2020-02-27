@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"encoding/json"
 
@@ -68,7 +67,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 		Key:     privateKey,
 		BaseURL: conf.Host,
 		SkipSSL: true,
-		Timeout: time.Second * 10,
+		Timeout: 10,
 	})
 	if err != nil {
 		return nil, err
