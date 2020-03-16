@@ -22,7 +22,6 @@ NAME := $(notdir $(PROJECT))
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
 VERSION := $(shell awk -F\" '/Version/ { print $$2; exit }' "${CURRENT_DIR}/version/version.go")
 EXTERNAL_TOOLS = \
-	github.com/golang/dep/cmd/dep \
 	github.com/mitchellh/gox
 
 # Current system information
@@ -32,7 +31,7 @@ GOARCH ?= $(shell go env GOARCH)
 # Default os-arch combination to build
 XC_OS ?= darwin linux
 XC_ARCH ?= 386 amd64 arm
-XC_EXCLUDE ?= darwin/arm 
+XC_EXCLUDE ?= darwin/arm
 
 # GPG Signing key (blank by default, means no GPG signing)
 GPG_KEY ?=
@@ -83,13 +82,6 @@ bootstrap:
 		go get -u "$$t"; \
 	done
 .PHONY: bootstrap
-
-# deps updates all dependencies for this project.
-deps:
-	@echo "==> Updating deps for ${PROJECT}"
-	@dep ensure -update
-	@dep prune
-.PHONY: deps
 
 # dev builds and installs the project locally.
 dev:

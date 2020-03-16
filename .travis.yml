@@ -1,11 +1,10 @@
 sudo: false
 language: go
-env: 
+env:
 go:
 - 1.x
 script:
 - make bootstrap
-- dep ensure
 - make test
 - make dev
 before_deploy:
