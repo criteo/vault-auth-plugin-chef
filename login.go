@@ -43,12 +43,14 @@ func pathLogin(b *backend) []*framework.Path {
 func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, privateKey string) (*logical.Response, error) {
 	l := b.Logger().With("node_name", nodeName, "request", req.ID)
 
+	l.Info("login attempt", "node_name", nodeName)
+
 	b.RLock()
 	defer b.RUnlock()
 
 	raw, err := req.Storage.Get(ctx, "config")
 	if err != nil {
-		l.Error("error occured while get chef host config: %s", err)
+		l.Error("error occured while get chef host config", "error", err)
 		return logical.ErrorResponse(fmt.Sprintf("Error while fetching config : %s", err)), err
 	}
 
@@ -75,7 +77,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 
 	node, err := client.Nodes.Get(nodeName)
 	if err != nil {
-		l.Error("error occured while authentication chef host with %s: %s", conf.Host, err)
+		l.Error("error occured while authentication chef host with", "host", conf.Host, "error", err)
 		return nil, logical.ErrPermissionDenied
 	}
 
@@ -83,7 +85,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 
 	var chefPolicy *ChefPolicy
 	if err != nil {
-		l.Error("error while fetching chef policy list from storage", err)
+		l.Error("error while fetching chef policy list from storage", "error", err)
 		return nil, err
 	}
 	if node.PolicyName != "" {
@@ -93,11 +95,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 			if p == node.PolicyName {
 				chefPolicy, err = b.getPolicyEntryFromStorage(ctx, req, p)
 				if err != nil {
-					l.Error("error while fetching chef policy %s from storage", err)
+					l.Error("error while fetching chef policy from storage", "policy", p, "error", err)
 					return nil, err
 				}
 				if chefPolicy == nil {
-					l.Error("can't fetch a listed chef policy named %s in storage", p)
+					l.Error("can't fetch a listed chef policy in storage", "policy", p)
 					return nil, fmt.Errorf("cannot fetch chef policy %s from storage backend", p)
 				}
 				auth = &logical.Auth{
@@ -138,11 +140,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 						l = l.With("role", r)
 						chefRole, err := b.getRoleEntryFromStorage(ctx, req, r)
 						if err != nil {
-							l.Error("error while fetching chef role %s from storage", err)
+							l.Error("error while fetching chef role from storage", "role", r, "error", err)
 							return nil, err
 						}
 						if chefRole == nil {
-							l.Error("can't fetch a listed chef role named %s in storage", r)
+							l.Error("can't fetch a listed chef role in storage", "role", r)
 							return nil, fmt.Errorf("cannot fetch chef role %s from storage backend", r)
 						}
 						auth := &logical.Auth{
@@ -197,6 +199,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, nodeName, pri
 	if len(policies) > 0 {
 		auth.Policies = append(auth.Policies, policies...)
 	}
+
+	l.Info("login successful", "node_name", nodeName)
+
 	return &logical.Response{Auth: auth}, nil
 }
 

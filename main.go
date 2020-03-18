@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"log"
+	stdlog "log"
 	"os"
 	"sync"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 )
@@ -24,7 +26,7 @@ func main() {
 		BackendFactoryFunc: Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	}); err != nil {
-		log.Fatal(err)
+		stdlog.Fatal(err)
 	}
 }
 
@@ -65,5 +67,11 @@ func Backend(_ *logical.BackendConfig) *backend {
 			pathSearch(&b),
 		),
 	}
+
+	logger := logging.NewVaultLoggerWithWriter(os.Stderr, log.Debug)
+	b.Backend.Setup(context.Background(), &logical.BackendConfig{
+		Logger: logger,
+	})
+
 	return &b
 }

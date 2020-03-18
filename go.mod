@@ -9,7 +9,7 @@ require (
 	github.com/go-chef/chef v0.9.0
 	github.com/golang/protobuf v1.3.4 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
-	github.com/hashicorp/go-hclog v0.12.0 // indirect
+	github.com/hashicorp/go-hclog v0.12.0
 	github.com/hashicorp/go-immutable-radix v1.1.0 // indirect
 	github.com/hashicorp/go-plugin v1.0.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.4 // indirect
