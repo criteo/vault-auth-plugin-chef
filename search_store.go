@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chef/chef"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) MatchingSearches(r *logical.Request, client *chef.Client) ([]string, []string, error) {
