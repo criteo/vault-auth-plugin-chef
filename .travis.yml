@@ -2,14 +2,14 @@ sudo: false
 language: go
 env:
 go:
-- 1.x
+  - 1.x
 script:
-- make bootstrap
-- make test
-- make dev
+  - make bootstrap
+  - make test
+  - make dev
 before_deploy:
-- rm -rf pkg/
-- make dist
+  - rm -rf pkg/
+  - make dist
 deploy:
   provider: releases
   file_glob: true
@@ -18,4 +18,4 @@ deploy:
   on:
     tags: true
   api_key:
-    secure: ql/pJsKPQT2ZaudmIrAKTNyyEOD/LoNvFQhN19372IKDki6k776SlYWPBzXbLvuFyG4wOLAwOZZLgLtKJHat3LbqiZesSD1ajyQTWxyXgffu70wZCWSBnvFqnONkcPs5RLPWfb1pJH/faHKSVFmWDsxb1m9ws7XXQwwPwgJYY95B/PjiMeIOckBdb3VUO/s7tZPCjQajzweXs+YKP3ZIP0Ct7EA1AcnCYawczn7xByg+B57tW2O2v1NxjXXAiQmEFU6GvRdq59szOq1XH/vbTSYu8Wc2KahFsDDr5xk544jiuj3PzODqNGSf3N9X/mbp1lZTWWs0bE9X+Rc1yXhAl1G9S4yImcaIH1cq1RE7NKIkcEmu6DyiksO00cFe+X4IqcsFRiTbFZ7lSX8v+8zTSM9L0f5jnL5/kZut0sF50j4wt3qj+gbV8Q+jFivzBzB2cE1n8OLo+tgfnuI2y474SnH+0H5Rp3SQvFdo/7g0xlrkjSsLE5IHNgH1X4qadK5txbOJbBL71hZB1MgFiUHlHFtEZuoz4BzojSd3daNijxKtZ3BHX9NH79VNs4b2/javXBcF54cg+F95yLkRsPp1g65iRCIi5CS6OfcyMzNnimWFtT6CaUONDOYP/A5qRnwJjWNSkVOC4ZSlP4DtyVY9QrGBQqucwoU5IhiuxfnLAPw=
+    secure: QFgfaDNVDipJQMsPrmYtc6SN/66KLlORg/GHTre+sle1EU3iZDebXQDA0UZBTBz9j99jLDfUuHhH6TEowp6yBtQJGxA+3O4b1O1wtuX6kUvKGIqtMM8sJMySGhNDEekn92vXaBfeLisfcy/1uuvbRjnlKRpZ7uDC+AltL3peajM7lxvG6BjMfcAPcKQWjoKWhU3Y+UuouUeCRa2XkBhqigFo+4DZvppdqZ1RgqTZZFQvGDkmr2PzGYLP04uB8rurTlXajlje1qkWqYtn7yI4DliIYCwEMC8qaxhrYubF8bWVi/+B31obBSdahDe1HHb0ri69U4Oy/ECF6LA/i3zn2fxWZeGxaxrMxd9IHUqSrhMtvew2gVHCHnYSXm6rDb71LtCpKcUjRw+Eq7LL7F061OJTLNaXXc0InykttppHw5bnMttMXLF2alI6Scz4Ccb/0QyzmwdNYhOr+W1YmwkIx+h3AmpDPg3F99sWeSs42X+DBsA+E2kI1r62ZgyK4HxlCS7A69TgKO/vYPCed+AvYa3WBKBpWRO8ezTOfM3108KB7lbydlo8yXZLbafD7JjgM0OBsBcQWnLE5AVs71hq24HK0DaYjt/mqAL+iUIqVgLbsQnUjgb8t3wFNi5lVFpFkR1O5Y/6BsMjAik0hjp3F/AKQLYcberxrVyxD7xt1/0=
