@@ -10,12 +10,3 @@ script:
 before_deploy:
   - rm -rf pkg/
   - make dist
-deploy:
-  provider: releases
-  file_glob: true
-  file: "pkg/dist/*"
-  skip_cleanup: true
-  on:
-    tags: true
-  api_key:
-    secure: PU9taBuz5z7JKUZRAAsjb9GUMH8q7Hpiqij1GGGmqZGm2dlTdFGmkBhG2JL4hXkKlFEMcV5Rofs7pkdsuDBE+ezd/Ema5EBE3G0G9Ixvqedgk1UnkMhuZNFkCgcOc2I86NMyGEauCcNU6Imynkl0i7RW5UTCWsCHEHSecz9TNxRtPGNHoa2lcwBUiX/Ko/kiZ5EtCflmUXsdMm8K+asLAsK9lPBziXixWZQYKwycUkqCWMaQRp7XJZpI/yluKS3631KlbGZpJIOCjm2l77IDInJX1Qu98Px6FnvI/DHHehXRg2FTm7X9otobIe9/uVQrCYILTPCHKFhi5Tqe8Ex3pt4W6zMNuXx8aBarssmjf2q4U7wRlNI4U5k/yLOuSgWdjc6rzdgepnLK/HrgPU0ziTKR+eb2CMao70TTfiWMHgYIWIZBIC484dP9ZdBS+qKMXAZfKjCDXka7Aqr4B0rsP6jMLSrb/Hsrjqfs9N3+btt72t8CeQcT5rzskDfLOF/W9tI0NWTb3fZHIUBoRr1G0JtzriERue42EaXjvkqWzNzyFFFqoS7hn8vxO7d56oXqELkxIS1caH0X4MbN7boB2yEArmqkxzvm031QA2kyM27BQmoxep5xUhOS4LInFwvV3k/To6eIdCpO53SB7LH9kuIRcwBxqh2pMoT1utzRAHA=
